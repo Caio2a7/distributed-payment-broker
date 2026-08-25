@@ -1,6 +1,7 @@
 package br.ufrn.dpb.server.repository;
 
 import br.ufrn.dpb.server.model.Account;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,5 +30,13 @@ public class InMemoryAccountRepository implements AccountRepository {
     @Override
     public void save(Account account) {
         accounts.put(account.getId(), account);
+    }
+
+    @Override
+    public Account create(BigDecimal balance){
+        Long id = nextId();
+        Account account = new Account(id, balance);
+        accounts.put(id, account);
+        return account;
     }
 }
