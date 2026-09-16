@@ -1,37 +1,60 @@
-HELP.md
+# Ambientes e Segredos
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Permite versionar o template de exemplo
+!.env.example
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+
+# Build Maven & Java
 target/
+**/target/
+*.class
+class/
 .mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Logs, Relatórios e Arquivos Temporários de Teste
+*.jtl
+*.log
+jmeter.log
+*.zip
+*.csv
+*.png
+*.pdf
+*.docx
+tabelas_para_word.html
 
-### IntelliJ IDEA ###
-.idea
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ruff_cache/
+.pytest_cache/
+
+# IDEs e Editores
+.idea/
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
 .vscode/
-
-### Eclipse / Bin ###
+.settings/
+.project
+.classpath
+.apt_generated
+.factorypath
+.springBeans
+.sts4-cache
 bin/
 **/bin/
+.DS_Store
+Thumbs.db
