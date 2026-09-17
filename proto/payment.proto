@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package payment;
+
+option java_package = "br.ufrn.dpb.gateway.grpc";
+option java_outer_classname = "PaymentProto";
+
+service PaymentService {
+    rpc ProcessPaymentStream (stream PaymentRequest) returns (stream PaymentResponse);
+}
+
+message PaymentRequest {
+    string mid = 1;
+    string card_number = 2;
+    int64 amount = 3;
+    int64 installments = 4;
+    string operation = 5;
+    int32 exp_month = 6;
+    int32 exp_year = 7;
+    int32 request_id = 8;
+}
+
+message PaymentResponse {
+    int32 request_id = 1;
+    string status = 2;
+    int64 gross_amount = 3;
+    int64 liquid_amount = 4;
+    string fingerprint = 5;
+    string mid = 6;
+    string error_message = 7;
+}
