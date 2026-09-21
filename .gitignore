@@ -58,3 +58,4 @@ bin/
 **/bin/
 .DS_Store
 Thumbs.db
+dependency-reduced-pom.xml
