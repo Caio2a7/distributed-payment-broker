@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="DPB - Teste de Carga e Capacidade">
+      <stringProp name="TestPlan.comments">Plano de Teste Multi-Protocolo (UDP, TCP, HTTP, gRPC) para o Distributed Payment Broker</stringProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="GATEWAY_HOST" elementType="Argument">
+            <stringProp name="Argument.name">GATEWAY_HOST</stringProp>
+            <stringProp name="Argument.value">54.160.77.3</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="GATEWAY_UDP_PORT" elementType="Argument">
+            <stringProp name="Argument.name">GATEWAY_UDP_PORT</stringProp>
+            <stringProp name="Argument.value">9090</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="GATEWAY_TCP_PORT" elementType="Argument">
+            <stringProp name="Argument.name">GATEWAY_TCP_PORT</stringProp>
+            <stringProp name="Argument.value">9090</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="GATEWAY_HTTP_PORT" elementType="Argument">
+            <stringProp name="Argument.name">GATEWAY_HTTP_PORT</stringProp>
+            <stringProp name="Argument.value">8080</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="GATEWAY_GRPC_PORT" elementType="Argument">
+            <stringProp name="Argument.name">GATEWAY_GRPC_PORT</stringProp>
+            <stringProp name="Argument.value">50051</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="THREADS" elementType="Argument">
+            <stringProp name="Argument.name">THREADS</stringProp>
+            <stringProp name="Argument.value">6</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="RAMP_UP" elementType="Argument">
+            <stringProp name="Argument.name">RAMP_UP</stringProp>
+            <stringProp name="Argument.value">6</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="LOOPS" elementType="Argument">
+            <stringProp name="Argument.name">LOOPS</stringProp>
+            <stringProp name="Argument.value">200</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Load Test Thread Group (Investigacao de Capacidade)">
+        <intProp name="ThreadGroup.num_threads">6</intProp>
+        <intProp name="ThreadGroup.ramp_time">6</intProp>
+        <longProp name="ThreadGroup.duration">600</longProp>
+        <longProp name="ThreadGroup.delay">0</longProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <intProp name="LoopController.loops">-1</intProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Data Generator &amp; Binary Packet Builder">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+
+def mids = [
+    &quot;100202604812345&quot;,
+    &quot;100202607965432&quot;,
+    &quot;100202608409160&quot;,
+    &quot;100202609745875&quot;,
+    &quot;100202603927547&quot;
+]
+
+int threadNum = ctx.getThreadNum()
+int iterNum = vars.getIteration()
+String mid = mids[Math.abs((threadNum + iterNum) % mids.size())]
+String card = &quot;4111111111111111&quot;
+
+long amount = (System.nanoTime() % 8000000000L) + 10000L
+long installments = ((iterNum % 3) + 1) as long
+int expMonth = 12
+int expYear = 2028
+byte opCode = 0
+int reqId = (threadNum * 10000) + iterNum
+
+vars.put(&quot;mid&quot;, mid)
+vars.put(&quot;cardNumber&quot;, card)
+vars.put(&quot;amount&quot;, String.valueOf(amount))
+vars.put(&quot;installments&quot;, String.valueOf(installments))
+vars.put(&quot;reqId&quot;, String.valueOf(reqId))
+
+byte[] midBytes = mid.getBytes(StandardCharsets.UTF_8)
+byte[] cardBytes = card.getBytes(StandardCharsets.UTF_8)
+
+int totalPayloadSize = 1 + midBytes.length + 1 + 1 + cardBytes.length + 4 + 4 + 8 + 8
+ByteBuffer payload = ByteBuffer.allocate(totalPayloadSize)
+payload.put((byte) midBytes.length)
+payload.put(midBytes)
+payload.put(opCode)
+payload.put((byte) cardBytes.length)
+payload.put(cardBytes)
+payload.putInt(expMonth)
+payload.putInt(expYear)
+payload.putLong(amount)
+payload.putLong(installments)
+
+int headerSize = 9
+ByteBuffer packet = ByteBuffer.allocate(headerSize + totalPayloadSize)
+packet.put((byte) 1)
+packet.putInt(reqId)
+packet.putInt(totalPayloadSize)
+packet.put(payload.array())
+
+vars.putObject(&quot;binaryPacketBytes&quot;, packet.array())
+</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Payment (Port 8080)">
+          <stringProp name="HTTPSampler.domain">${GATEWAY_HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${GATEWAY_HTTP_PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.path">/payments</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&quot;mid&quot;:&quot;${mid}&quot;,&quot;cardNumber&quot;:&quot;${cardNumber}&quot;,&quot;amount&quot;:${amount},&quot;installments&quot;:${installments},&quot;operation&quot;:&quot;PAYMENT&quot;,&quot;expMonth&quot;:12,&quot;expYear&quot;:2028}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP Payment (Port 9090)" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+byte[] packet = (byte[]) vars.getObject(&quot;binaryPacketBytes&quot;)
+String host = vars.get(&quot;GATEWAY_HOST&quot;)
+int port = Integer.parseInt(vars.get(&quot;GATEWAY_UDP_PORT&quot;))
+
+String udpKey = &quot;UDP_SOCKET_&quot; + host + &quot;_&quot; + port
+DatagramSocket socket = (DatagramSocket) vars.getObject(udpKey)
+if (socket == null || socket.isClosed()) {
+    socket = new DatagramSocket()
+    socket.setSoTimeout(15000)
+    vars.putObject(udpKey, socket)
+}
+
+SampleResult.sampleStart()
+try {
+    DatagramPacket sendPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(host), port)
+    socket.send(sendPacket)
+
+    byte[] buffer = new byte[1024]
+    DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length)
+    socket.receive(receivePacket)
+
+    SampleResult.sampleEnd()
+    byte[] respData = receivePacket.getData()
+    SampleResult.setResponseData(respData)
+    if (receivePacket.getLength() &gt; 0 &amp;&amp; respData[0] == (byte) 2) {
+        SampleResult.setResponseCode(&quot;200&quot;)
+        SampleResult.setResponseMessage(&quot;UDP OK&quot;)
+        SampleResult.setSuccessful(true)
+    } else {
+        String errMsg = receivePacket.getLength() &gt; 9 ? new String(respData, 9, receivePacket.getLength() - 9, &quot;UTF-8&quot;) : &quot;No authorizer available&quot;
+        SampleResult.setResponseCode(&quot;503&quot;)
+        SampleResult.setResponseMessage(errMsg)
+        SampleResult.setSuccessful(false)
+    }
+} catch (Exception e) {
+    SampleResult.sampleEnd()
+    SampleResult.setSuccessful(false)
+    SampleResult.setResponseCode(&quot;500&quot;)
+    SampleResult.setResponseMessage(e.getMessage())
+    try { socket.close() } catch (Exception ignored) {}
+    vars.putObject(udpKey, null)
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP Payment (Port 9090)" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.net.Socket
+
+byte[] packet = (byte[]) vars.getObject(&quot;binaryPacketBytes&quot;)
+String host = vars.get(&quot;GATEWAY_HOST&quot;)
+int port = Integer.parseInt(vars.get(&quot;GATEWAY_TCP_PORT&quot;))
+
+String sockKey = &quot;TCP_SOCKET_&quot; + host + &quot;_&quot; + port
+Socket socket = (Socket) vars.getObject(sockKey)
+if (socket == null || socket.isClosed() || !socket.isConnected()) {
+    socket = new Socket(host, port)
+    socket.setSoTimeout(15000)
+    vars.putObject(sockKey, socket)
+}
+
+SampleResult.sampleStart()
+try {
+    DataOutputStream out = new DataOutputStream(socket.getOutputStream())
+    DataInputStream inStream = new DataInputStream(socket.getInputStream())
+
+    out.writeInt(packet.length)
+    out.write(packet)
+    out.flush()
+
+    int respLen = inStream.readInt()
+    byte[] respBytes = new byte[respLen]
+    inStream.readFully(respBytes)
+
+    SampleResult.sampleEnd()
+    SampleResult.setResponseData(respBytes)
+    if (respBytes.length &gt; 0 &amp;&amp; respBytes[0] == (byte) 2) {
+        SampleResult.setResponseCode(&quot;200&quot;)
+        SampleResult.setResponseMessage(&quot;TCP OK&quot;)
+        SampleResult.setSuccessful(true)
+    } else {
+        String errMsg = respBytes.length &gt; 9 ? new String(respBytes, 9, respBytes.length - 9, &quot;UTF-8&quot;) : &quot;No authorizer available&quot;
+        SampleResult.setResponseCode(&quot;503&quot;)
+        SampleResult.setResponseMessage(errMsg)
+        SampleResult.setSuccessful(false)
+    }
+} catch (Exception e) {
+    SampleResult.sampleEnd()
+    SampleResult.setSuccessful(false)
+    SampleResult.setResponseCode(&quot;500&quot;)
+    SampleResult.setResponseMessage(e.getMessage())
+    try { socket.close() } catch (Exception ignored) {}
+    vars.putObject(sockKey, null)
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="gRPC Stream Payment (Port 50051)" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import io.grpc.ManagedChannel
+import io.grpc.ManagedChannelBuilder
+import io.grpc.MethodDescriptor
+import io.grpc.stub.ClientCalls
+import io.grpc.stub.StreamObserver
+import java.io.ByteArrayInputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
+byte[] packet = (byte[]) vars.getObject(&quot;binaryPacketBytes&quot;)
+String host = vars.get(&quot;GATEWAY_HOST&quot;)
+int port = Integer.parseInt(vars.get(&quot;GATEWAY_GRPC_PORT&quot;))
+
+String chanKey = &quot;GRPC_CHANNEL_&quot; + host + &quot;_&quot; + port
+ManagedChannel channel = (ManagedChannel) vars.getObject(chanKey)
+if (channel == null || channel.isShutdown() || channel.isTerminated()) {
+    channel = ManagedChannelBuilder.forAddress(host, port)
+            .usePlaintext()
+            .build()
+    vars.putObject(chanKey, channel)
+}
+
+def byteMarshaller = new MethodDescriptor.Marshaller() {
+    InputStream stream(value) { new ByteArrayInputStream((byte[]) value) }
+    Object parse(java.io.InputStream is) { is.readAllBytes() }
+}
+
+def streamMethod = MethodDescriptor.newBuilder()
+        .setType(MethodDescriptor.MethodType.BIDI_STREAMING)
+        .setFullMethodName(&quot;payment.PaymentService/ProcessPaymentStream&quot;)
+        .setRequestMarshaller(byteMarshaller)
+        .setResponseMarshaller(byteMarshaller)
+        .build()
+
+CountDownLatch latch = new CountDownLatch(1)
+boolean callSuccess = false
+String respCode = &quot;200&quot;
+String respMsg = &quot;gRPC OK&quot;
+
+SampleResult.sampleStart()
+try {
+    StreamObserver reqObserver = ClientCalls.asyncBidiStreamingCall(
+        channel.newCall(streamMethod, io.grpc.CallOptions.DEFAULT),
+        new StreamObserver() {
+            void onNext(value) {
+                byte[] data = (byte[]) value
+                SampleResult.setResponseData(data)
+                if (data != null &amp;&amp; data.length &gt; 0 &amp;&amp; data[0] == (byte) 2) {
+                    callSuccess = true
+                    respCode = &quot;200&quot;
+                    respMsg = &quot;gRPC OK&quot;
+                } else {
+                    callSuccess = false
+                    respCode = &quot;503&quot;
+                    respMsg = (data != null &amp;&amp; data.length &gt; 9) ? new String(data, 9, data.length - 9, &quot;UTF-8&quot;) : &quot;No authorizer available&quot;
+                }
+                latch.countDown()
+            }
+            void onError(Throwable t) {
+                callSuccess = false
+                respCode = &quot;500&quot;
+                respMsg = t.getMessage()
+                latch.countDown()
+            }
+            void onCompleted() {
+                latch.countDown()
+            }
+        }
+    )
+
+    reqObserver.onNext(packet)
+    reqObserver.onCompleted()
+    latch.await(15, TimeUnit.SECONDS)
+
+    SampleResult.sampleEnd()
+    SampleResult.setSuccessful(callSuccess)
+    SampleResult.setResponseCode(respCode)
+    SampleResult.setResponseMessage(respMsg)
+} catch (Exception e) {
+    SampleResult.sampleEnd()
+    SampleResult.setSuccessful(false)
+    SampleResult.setResponseCode(&quot;500&quot;)
+    SampleResult.setResponseMessage(e.getMessage())
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
